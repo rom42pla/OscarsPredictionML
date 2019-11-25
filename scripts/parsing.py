@@ -3,6 +3,8 @@
 
 import pandas
 import os
+import ast
+import numpy
 
 import utils
 
@@ -44,22 +46,38 @@ def parseFileToDataframe(filepath, printDataframe = False, clean = True):
                         tmp += str(ord(c))
                 cleanString = int(tmp)
             else:
+                # eventually parses the "string number" to a number
                 try:
                     n = float(cleanString)
                     cleanString = n
-                except ValueError:
-                    cleanString = cleanString
+                except:
+                    if(len(cleanString) > 0):
+                        # checks null
+                        if(cleanString == "null"):
+                            cleanString = numpy.nan
+                        # checks for booleans
+                        elif(cleanString == "true"):
+                            cleanString = 1
+                        elif(cleanString == "false"):
+                            cleanString = 0
+                        # checks for lists
+                        elif(cleanString[0] == "["):
+                            cleanString = ast.literal_eval(cleanString)
+                        # checks some column-related errors
+                        elif(i == 5 and cleanString in {"unrated", "not rated"}):
+                            cleanString = None
+            # updates the line
             cleanLine += [cleanString]
         return cleanLine
 
     # transforms parsed liness into strings
     lines = list(map(splitLines, data))
-    features, data = lines[0], lines[1:]
+    features, data = list(map(lambda x: x.strip(), lines[0])), lines[1:]
     # checks if a correction has to be made
     if(cleanErrors):
         data = list(map(cleanErrors, data))
     # transforms the list to a dataframe
-    dataframe = pandas.DataFrame(data=data, columns=features)
+    dataframe = pandas.DataFrame(data=data, columns=features, dtype=object)
     if(printDataframe):
         print(dataframe)
 
